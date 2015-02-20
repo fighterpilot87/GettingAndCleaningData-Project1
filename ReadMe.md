@@ -6,14 +6,14 @@ feat - input list of all features of data sets
 
 ##Objectives
 
-###1- Merges the training and the test sets to create one data set.
-##Extract data from files
+####1- Merges the training and the test sets to create one data set.
+####Extract data from files
 trainsub, testsub
 trainx, testx
 trainy, testy
-###merge activity names with labels
+####merge activity names with labels
 train_y_act, test_y_act
-###Column combine activity to train/test set
+####Column combine activity to train/test set
 train_xy_act, test_xy_act
 
 
