@@ -1,31 +1,54 @@
 list.files(path = "./UCI HAR Dataset/") #list files in target folder
 
-#input data of activity names into variable for training
-activity <- read.table(file="./UCI HAR Dataset/activity_labels.txt")
-names(activity)[2] <- "activity"
-#Input list of all features into variable
-feat <- read.table(file="./UCI HAR Dataset/features.txt", sep="-", head=FALSE)
+install.packages('plyr')
+install.packages('dplyr')
+install.packages('tidyr')
+library(plyr); library(dplyr)
+library(tidyr)
 
+
+#input data of activity names into variable for training
+activity <- tbl_df(read.table(file="./UCI HAR Dataset/activity_labels.txt"))
+#activity <- rename(activity, activity = V2)
+
+#Input list of all features into variable
+feat <- tbl_df(read.table(file="./UCI HAR Dataset/features.txt"))
+feat$V2 <- as.character(feat$V2)
 
 ###TRAINING
-#list files in sub folder "train"
-list.files(path = "./UCI HAR Dataset/train/")
+#use list files to view in sub folder "train"
+#list.files(path = "./UCI HAR Dataset/train/")
 #input train data from files into variable
-trainsub <- read.table(file="./UCI HAR Dataset/train/subject_train.txt")
-trainx <- read.table(file="./UCI HAR Dataset/train/X_train.txt")
-trainy <- read.table(file="./UCI HAR Dataset/train/y_train.txt")
+trainsub <- tbl_df(read.table(file="./UCI HAR Dataset/train/subject_train.txt"))
+trainx <- tbl_df(read.table(file="./UCI HAR Dataset/train/X_train.txt"))
+trainy <- tbl_df(read.table(file="./UCI HAR Dataset/train/y_train.txt"))
+
+#Assign variable names
+names(trainx) <- feat$V2
+
 
 #merge activity names with Training labels
-train_y_act <- merge(trainy, activity, all=TRUE)
+train_act <- merge(trainy, activity, all=TRUE, sort=FALSE)
 
-#Column combine activity names to Training set
-train_xy_act <- cbind(train_y_act$V2, trainx)
-train_xy_act[1:5, 1:5]
-train_xy_act[7348:7352, 1:5]
+#Extract only measurments on mean and standard deviation
+train_xy <- tbl_df(
+  cbind(trainsub, train_act$V2, 
+        select(trainx[, unique(colnames(trainx))], 
+               contains("ean"), contains("std")
+               )
+        )
+)
+names(train_xy)[1:2] <- c("subject", "activity")
 
-names(trainx) <- feat$V2
-names(train_xy_act) <- c("activity", names(trainx))
-train_xy_act[1:5, 1:5]
+train_xy <- train_xy %>% group_by(subject, activity) %>% tbl_df()
+
+a <- train_xy %>% 
+  gather(variable, measurement, -c(subject, activity))
+b <- a %>% ddply(c('subject', 'activity', 'variable'), 
+                 summarise, 
+                 mean=mean(measurement))
+
+
 
 ###TEST
 #list files in sub folder "test"
