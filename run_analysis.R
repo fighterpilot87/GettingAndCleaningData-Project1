@@ -1,71 +1,80 @@
-list.files(path = "./UCI HAR Dataset/") #list files in target folder
+#01
+rm(list=ls()) 
 
+#02
 install.packages('plyr')
 install.packages('dplyr')
 install.packages('tidyr')
+
+#03
 library(plyr); library(dplyr)
 library(tidyr)
 library(stats)
 
-
-#input data of activity names into variable for training
+#04
 activity <- tbl_df(read.table(file="./UCI HAR Dataset/activity_labels.txt"))
-#activity <- rename(activity, activity = V2)
 
-#Input list of all features into variable
+#05
 feat <- tbl_df(read.table(file="./UCI HAR Dataset/features.txt"))
+
+#06
 feat$V2 <- as.character(feat$V2)
 
-###EXTRACT Training and Test Data
-#use list files to view in sub folder "train"
-#list.files(path = "./UCI HAR Dataset/train/")
-#input train data from files into variable
+#07
 trainsub   <- tbl_df(read.table(file="./UCI HAR Dataset/train/subject_train.txt"))
 trainx     <- tbl_df(read.table(file="./UCI HAR Dataset/train/X_train.txt"))
 trainy     <- tbl_df(read.table(file="./UCI HAR Dataset/train/y_train.txt"))
+
+#08
 testsub    <- tbl_df(read.table(file="./UCI HAR Dataset/test/subject_test.txt"))
 testx      <- tbl_df(read.table(file="./UCI HAR Dataset/test/X_test.txt"))
 testy      <- tbl_df(read.table(file="./UCI HAR Dataset/test/y_test.txt"))
 
-#Assign variable names to measurements
+#09 
 names(trainx) <- feat$V2
 names(testx)  <- feat$V2
 
-
-#merge activity names with labels
+#10 
 train_act <- merge(trainy, activity, all=TRUE, sort=FALSE)
 test_act  <- merge(testy,  activity, all=TRUE, sort=FALSE)
 
-#Extract only measurments on mean and standard deviation
-#Bind with activity names
+#11
 train_xy <- tbl_df(
-  cbind(type='train', trainsub, train_act$V2, 
+  cbind(data_type='training', trainsub, train_act$V2, 
         select(trainx[, unique(colnames(trainx))], 
                contains("ean"), contains("std")
-               )
         )
+  )
 )
 test_xy <- tbl_df(
-  cbind(type='test', testsub, test_act$V2, 
+  cbind(data_type='test', testsub, test_act$V2, 
         select(testx[, unique(colnames(testx))], 
                contains("ean"), contains("std")
         )
   )
 )
 
+#12
 names(train_xy)[2:3] <- c("subject", "activity")
 names(test_xy)[2:3] <- c("subject", "activity")
 
 
-#Combine training and test data
+#13
 train_test <- merge(train_xy, test_xy, all=TRUE, sort=FALSE)
 
-#Assign group names
-train_test <- train_test %>% tbl_df() %>% group_by(type, subject, activity)
+#14
+train_test <- train_test %>% tbl_df() %>% group_by(data_type, subject, activity)
 
-a <- train_test %>% 
-  gather(variable, measurement, -c(type, subject, activity))
-a <- a %>% tbl_df() %>% group_by(subject, activity, variable)
+#15
+train_test_grp <- train_test %>% 
+  gather(variable, measurement, -c(data_type, subject, activity))
 
-b <- aggregate(measurement~subject+activity, a, mean) %>% arrange(subject)
+#16
+train_test_grp <- train_test_grp %>% 
+  tbl_df() %>% group_by(subject, activity, variable)
 
+#17
+train_test_grp_mean <- aggregate(measurement~subject+activity, train_test_grp, mean) %>% arrange(subject)
+
+#18
+write.table(train_test_grp_mean, file="GaCDCP_tidydata.txt", row.name=FALSE)
